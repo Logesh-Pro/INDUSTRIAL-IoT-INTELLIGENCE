@@ -82,6 +82,7 @@ The project is designed in a modular way so additional hardware such as a relay-
                      │ • Smart Analytics            │
                      │ • Environmental Analysis    │
                      └─────────────────────────────┘
+```
 # 🔌 Hardware
 
 ## Current Hardware
