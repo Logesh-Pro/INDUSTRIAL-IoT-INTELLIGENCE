@@ -1,0 +1,716 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Industrial IoT Operations Center</title>
+    <meta name="description" content="Industrial IoT Operations and Monitoring Platform">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="./css/style.css">
+</head>
+
+<body>
+
+<div class="app-shell">
+
+    <!-- TOP BAR -->
+    <header class="topbar">
+        <div class="brand">
+            <div class="brand-mark">
+                <span></span><span></span><span></span>
+            </div>
+            <div>
+                <div class="brand-title">INDUSTRIAL IoT</div>
+                <div class="brand-subtitle">OPERATIONS CENTER</div>
+            </div>
+        </div>
+
+        <div class="topbar-center">
+            <div class="system-indicator">
+                <span class="pulse"></span>
+                <span id="system-status">SYSTEM ONLINE</span>
+            </div>
+            <div class="environment-badge" id="environment">DEVELOPMENT</div>
+        </div>
+
+        <div class="topbar-right">
+            <div class="clock">
+                <div id="clock-time">--:--:--</div>
+                <div id="clock-date">----</div>
+            </div>
+            <button class="icon-button" onclick="refreshAll()" title="Refresh">
+                ↻
+            </button>
+        </div>
+    </header>
+
+    <div class="main-layout">
+
+        <!-- SIDEBAR -->
+        <aside class="sidebar">
+
+            <div class="section-label">NAVIGATION</div>
+
+            <nav>
+                <button class="nav-item active" data-section="overview">
+                    <span class="nav-icon">▦</span>
+                    <span>Overview</span>
+                </button>
+
+                <button class="nav-item" data-section="monitoring">
+                    <span class="nav-icon">◉</span>
+                    <span>Live Monitoring</span>
+                </button>
+
+                <button class="nav-item" data-section="devices">
+                    <span class="nav-icon">▣</span>
+                    <span>Devices</span>
+                </button>
+
+                <button class="nav-item" data-section="alarms">
+                    <span class="nav-icon">△</span>
+                    <span>Alarms & Events</span>
+                    <span class="nav-count" id="nav-alarm-count">0</span>
+                </button>
+
+                <button class="nav-item" data-section="trends">
+                    <span class="nav-icon">⌁</span>
+                    <span>Trends</span>
+                </button>
+
+                <button class="nav-item" data-section="system">
+                    <span class="nav-icon">⚙</span>
+                    <span>System Health</span>
+                </button>
+            </nav>
+
+            <div class="sidebar-divider"></div>
+
+            <div class="section-label">ASSET HIERARCHY</div>
+
+            <div class="asset-tree">
+
+                <div class="tree-row level-0">
+                    <span class="tree-arrow">▼</span>
+                    <span class="tree-icon site">◆</span>
+                    <span>SITE 01</span>
+                </div>
+
+                <div class="tree-row level-1">
+                    <span class="tree-arrow">▼</span>
+                    <span class="tree-icon">▣</span>
+                    <span>BUILDING A</span>
+                </div>
+
+                <div class="tree-row level-2">
+                    <span class="tree-arrow">▼</span>
+                    <span class="tree-icon">□</span>
+                    <span>FLOOR 01</span>
+                </div>
+
+                <div class="tree-row level-3">
+                    <span class="tree-arrow">▼</span>
+                    <span class="tree-icon">◌</span>
+                    <span>ZONE 01</span>
+                </div>
+
+                <div class="tree-row level-4 selected">
+                    <span class="device-dot"></span>
+                    <span>ESP32_01</span>
+                </div>
+
+            </div>
+
+            <div class="sidebar-divider"></div>
+
+            <div class="section-label">CONNECTIONS</div>
+
+            <div class="connection-list">
+                <div class="connection">
+                    <span class="status-dot online"></span>
+                    <div>
+                        <strong>MQTT BROKER</strong>
+                        <small id="mqtt-status">CONNECTED</small>
+                    </div>
+                </div>
+
+                <div class="connection">
+                    <span class="status-dot online"></span>
+                    <div>
+                        <strong>INFLUXDB</strong>
+                        <small id="db-status">CONNECTED</small>
+                    </div>
+                </div>
+
+                <div class="connection">
+                    <span class="status-dot online"></span>
+                    <div>
+                        <strong>FLASK API</strong>
+                        <small id="api-status">HEALTHY</small>
+                    </div>
+                </div>
+            </div>
+
+            <div class="sidebar-footer">
+                <span>IIOT PLATFORM</span>
+                <span>v2.0</span>
+            </div>
+
+        </aside>
+
+        <!-- CONTENT -->
+        <main class="content">
+
+            <!-- OVERVIEW -->
+            <section id="section-overview" class="dashboard-section active">
+
+                <div class="page-heading">
+                    <div>
+                        <div class="eyebrow">SITE 01 / BUILDING A / ZONE 01</div>
+                        <h1>Operations Overview</h1>
+                        <p>Real-time industrial environment and asset monitoring</p>
+                    </div>
+
+                    <div class="live-badge">
+                        <span class="pulse"></span>
+                        LIVE DATA
+                    </div>
+                </div>
+
+                <!-- KPI GRID -->
+                <div class="kpi-grid">
+
+                    <div class="kpi-card">
+                        <div class="kpi-header">
+                            <span>DEVICES</span>
+                            <span class="kpi-symbol">▣</span>
+                        </div>
+                        <div class="kpi-value" id="kpi-devices">--</div>
+                        <div class="kpi-footer">
+                            <span class="good" id="kpi-devices-detail">-- online</span>
+                            <span>ASSETS</span>
+                        </div>
+                    </div>
+
+                    <div class="kpi-card">
+                        <div class="kpi-header">
+                            <span>OCCUPANCY</span>
+                            <span class="kpi-symbol">◉</span>
+                        </div>
+                        <div class="kpi-value" id="kpi-people">--</div>
+                        <div class="kpi-footer">
+                            <span id="occupancy-state">MONITORING</span>
+                            <span>PEOPLE</span>
+                        </div>
+                    </div>
+
+                    <div class="kpi-card">
+                        <div class="kpi-header">
+                            <span>TEMPERATURE</span>
+                            <span class="kpi-symbol">°</span>
+                        </div>
+                        <div class="kpi-value"><span id="kpi-temperature">--</span><small>°C</small></div>
+                        <div class="kpi-footer">
+                            <span id="temperature-state">NORMAL</span>
+                            <span>AMBIENT</span>
+                        </div>
+                    </div>
+
+                    <div class="kpi-card">
+                        <div class="kpi-header">
+                            <span>HUMIDITY</span>
+                            <span class="kpi-symbol">≈</span>
+                        </div>
+                        <div class="kpi-value"><span id="kpi-humidity">--</span><small>%</small></div>
+                        <div class="kpi-footer">
+                            <span id="humidity-state">NORMAL</span>
+                            <span>RELATIVE</span>
+                        </div>
+                    </div>
+
+                    <div class="kpi-card alarm-kpi">
+                        <div class="kpi-header">
+                            <span>ACTIVE ALARMS</span>
+                            <span class="kpi-symbol">△</span>
+                        </div>
+                        <div class="kpi-value" id="kpi-alarms">0</div>
+                        <div class="kpi-footer">
+                            <span id="alarm-state">SYSTEM CLEAR</span>
+                            <span>EVENTS</span>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- MAIN GRID -->
+                <div class="overview-grid">
+
+                    <!-- LIVE CHART -->
+                    <div class="panel chart-panel">
+                        <div class="panel-header">
+                            <div>
+                                <div class="panel-title">LIVE TELEMETRY</div>
+                                <div class="panel-subtitle">Environmental sensor stream</div>
+                            </div>
+
+                            <div class="chart-controls">
+                                <button class="range-btn active" data-hours="1">1H</button>
+                                <button class="range-btn" data-hours="6">6H</button>
+                                <button class="range-btn" data-hours="24">24H</button>
+                            </div>
+                        </div>
+
+                        <div class="chart-legend">
+                            <span><i class="legend-temp"></i> Temperature</span>
+                            <span><i class="legend-humidity"></i> Humidity</span>
+                            <span><i class="legend-people"></i> Occupancy</span>
+                        </div>
+
+                        <div class="chart-wrap">
+                            <canvas id="telemetry-chart"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- CURRENT STATE -->
+                    <div class="panel state-panel">
+                        <div class="panel-header">
+                            <div>
+                                <div class="panel-title">CURRENT STATE</div>
+                                <div class="panel-subtitle">ESP32_01 / Zone 01</div>
+                            </div>
+                            <span class="online-badge" id="device-badge">ONLINE</span>
+                        </div>
+
+                        <div class="state-device">
+                            <div class="device-visual">
+                                <div class="device-ring">
+                                    <div class="device-core">ESP</div>
+                                </div>
+                            </div>
+
+                            <div class="device-name">ESP32_01</div>
+                            <div class="device-type">ENVIRONMENTAL EDGE NODE</div>
+                        </div>
+
+                        <div class="state-metrics">
+                            <div>
+                                <span>TEMPERATURE</span>
+                                <strong id="state-temp">-- °C</strong>
+                            </div>
+                            <div>
+                                <span>HUMIDITY</span>
+                                <strong id="state-humidity">-- %</strong>
+                            </div>
+                            <div>
+                                <span>OCCUPANCY</span>
+                                <strong id="state-people">--</strong>
+                            </div>
+                            <div>
+                                <span>LAST SEEN</span>
+                                <strong id="state-last-seen">--</strong>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- LOWER GRID -->
+                <div class="lower-grid">
+
+                    <!-- ALARMS -->
+                    <div class="panel">
+                        <div class="panel-header">
+                            <div>
+                                <div class="panel-title">ACTIVE ALARMS</div>
+                                <div class="panel-subtitle">Real-time safety conditions</div>
+                            </div>
+                            <button class="text-button" onclick="showSection('alarms')">VIEW ALL →</button>
+                        </div>
+
+                        <div id="alarm-preview" class="alarm-preview">
+                            <div class="empty-state">
+                                <div class="empty-icon">✓</div>
+                                <strong>NO ACTIVE ALARMS</strong>
+                                <span>All monitored conditions are within configured limits.</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- EVENTS -->
+                    <div class="panel">
+                        <div class="panel-header">
+                            <div>
+                                <div class="panel-title">SYSTEM EVENTS</div>
+                                <div class="panel-subtitle">Latest device activity</div>
+                            </div>
+                            <button class="text-button" onclick="showSection('devices')">DETAILS →</button>
+                        </div>
+
+                        <div id="event-preview" class="event-list">
+                            <div class="empty-state compact">
+                                Loading events...
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
+            </section>
+
+            <!-- MONITORING -->
+            <section id="section-monitoring" class="dashboard-section">
+
+                <div class="page-heading">
+                    <div>
+                        <div class="eyebrow">REAL-TIME DATA</div>
+                        <h1>Live Monitoring</h1>
+                        <p>Continuous industrial telemetry stream</p>
+                    </div>
+                </div>
+
+                <div class="monitor-grid">
+
+                    <div class="monitor-card temperature">
+                        <span>TEMPERATURE</span>
+                        <strong id="monitor-temp">-- °C</strong>
+                        <small>Threshold: 32.0 °C</small>
+                        <div class="meter"><div id="temp-meter"></div></div>
+                    </div>
+
+                    <div class="monitor-card humidity">
+                        <span>HUMIDITY</span>
+                        <strong id="monitor-humidity">-- %</strong>
+                        <small>Threshold: 80.0 %</small>
+                        <div class="meter"><div id="humidity-meter"></div></div>
+                    </div>
+
+                    <div class="monitor-card occupancy">
+                        <span>OCCUPANCY</span>
+                        <strong id="monitor-people">--</strong>
+                        <small>Threshold: 7 people</small>
+                        <div class="meter"><div id="people-meter"></div></div>
+                    </div>
+
+                </div>
+
+                <div class="panel large-panel">
+                    <div class="panel-header">
+                        <div>
+                            <div class="panel-title">REAL-TIME SENSOR TELEMETRY</div>
+                            <div class="panel-subtitle">Updated automatically every 2 seconds</div>
+                        </div>
+                        <span class="live-badge"><span class="pulse"></span> STREAMING</span>
+                    </div>
+                    <div class="chart-wrap large">
+                        <canvas id="monitor-chart"></canvas>
+                    </div>
+                </div>
+
+            </section>
+
+            <!-- DEVICES -->
+            <section id="section-devices" class="dashboard-section">
+
+                <div class="page-heading">
+                    <div>
+                        <div class="eyebrow">ASSET MANAGEMENT</div>
+                        <h1>Device Health</h1>
+                        <p>Industrial edge nodes and communication status</p>
+                    </div>
+                </div>
+
+                <div class="device-summary-grid">
+                    <div class="summary-box">
+                        <span>TOTAL DEVICES</span>
+                        <strong id="device-total">--</strong>
+                    </div>
+                    <div class="summary-box">
+                        <span>ONLINE</span>
+                        <strong class="good" id="device-online">--</strong>
+                    </div>
+                    <div class="summary-box">
+                        <span>OFFLINE</span>
+                        <strong class="bad" id="device-offline">--</strong>
+                    </div>
+                </div>
+
+                <div class="panel">
+                    <div class="panel-header">
+                        <div>
+                            <div class="panel-title">DEVICE REGISTRY</div>
+                            <div class="panel-subtitle">Current asset health and telemetry</div>
+                        </div>
+                    </div>
+
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>DEVICE</th>
+                                    <th>LOCATION</th>
+                                    <th>STATUS</th>
+                                    <th>TEMPERATURE</th>
+                                    <th>HUMIDITY</th>
+                                    <th>OCCUPANCY</th>
+                                    <th>LAST SEEN</th>
+                                </tr>
+                            </thead>
+                            <tbody id="device-table">
+                                <tr>
+                                    <td colspan="7" class="table-loading">Loading device registry...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </section>
+
+            <!-- ALARMS -->
+            <section id="section-alarms" class="dashboard-section">
+
+                <div class="page-heading">
+                    <div>
+                        <div class="eyebrow">SAFETY & EVENTS</div>
+                        <h1>Alarms & Events</h1>
+                        <p>Industrial condition monitoring and alarm history</p>
+                    </div>
+                </div>
+
+                <div class="alarm-status-banner" id="alarm-banner">
+                    <div class="banner-icon">✓</div>
+                    <div>
+                        <strong>SYSTEM CLEAR</strong>
+                        <span>No active safety conditions detected</span>
+                    </div>
+                </div>
+
+                <div class="panel">
+                    <div class="panel-header">
+                        <div>
+                            <div class="panel-title">ALARM HISTORY</div>
+                            <div class="panel-subtitle">Last 24 hours</div>
+                        </div>
+                    </div>
+
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>TIME</th>
+                                    <th>DEVICE</th>
+                                    <th>ALARM</th>
+                                    <th>SEVERITY</th>
+                                    <th>STATUS</th>
+                                    <th>VALUE</th>
+                                    <th>MESSAGE</th>
+                                </tr>
+                            </thead>
+                            <tbody id="alarm-table">
+                                <tr>
+                                    <td colspan="7" class="table-loading">Loading alarm history...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="panel">
+                    <div class="panel-header">
+                        <div>
+                            <div class="panel-title">DEVICE EVENTS</div>
+                            <div class="panel-subtitle">Connection and operational events</div>
+                        </div>
+                    </div>
+
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>TIME</th>
+                                    <th>DEVICE</th>
+                                    <th>EVENT</th>
+                                    <th>STATUS</th>
+                                    <th>DETAIL</th>
+                                </tr>
+                            </thead>
+                            <tbody id="event-table">
+                                <tr>
+                                    <td colspan="5" class="table-loading">Loading events...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </section>
+
+            <!-- TRENDS -->
+            <section id="section-trends" class="dashboard-section">
+
+                <div class="page-heading">
+                    <div>
+                        <div class="eyebrow">ANALYTICS</div>
+                        <h1>Telemetry Trends</h1>
+                        <p>Historical industrial environment analysis</p>
+                    </div>
+                </div>
+
+                <div class="trend-controls">
+                    <button class="range-btn trend-range active" data-hours="1">1 HOUR</button>
+                    <button class="range-btn trend-range" data-hours="6">6 HOURS</button>
+                    <button class="range-btn trend-range" data-hours="24">24 HOURS</button>
+                </div>
+
+                <div class="trend-grid">
+                    <div class="panel">
+                        <div class="panel-header">
+                            <div class="panel-title">TEMPERATURE TREND</div>
+                        </div>
+                        <div class="chart-wrap trend"><canvas id="temperature-chart"></canvas></div>
+                    </div>
+
+                    <div class="panel">
+                        <div class="panel-header">
+                            <div class="panel-title">HUMIDITY TREND</div>
+                        </div>
+                        <div class="chart-wrap trend"><canvas id="humidity-chart"></canvas></div>
+                    </div>
+                </div>
+
+                <div class="panel">
+                    <div class="panel-header">
+                        <div class="panel-title">OCCUPANCY TREND</div>
+                    </div>
+                    <div class="chart-wrap trend"><canvas id="occupancy-chart"></canvas></div>
+                </div>
+
+            </section>
+
+            <!-- SYSTEM -->
+            <section id="section-system" class="dashboard-section">
+
+                <div class="page-heading">
+                    <div>
+                        <div class="eyebrow">PLATFORM INFRASTRUCTURE</div>
+                        <h1>System Health</h1>
+                        <p>Industrial IoT data pipeline and infrastructure status</p>
+                    </div>
+                </div>
+
+                <div class="pipeline">
+
+                    <div class="pipeline-node healthy">
+                        <div class="pipeline-icon">ESP</div>
+                        <strong>EDGE DEVICES</strong>
+                        <span>ESP32 TELEMETRY</span>
+                        <small>● ONLINE</small>
+                    </div>
+
+                    <div class="pipeline-line"></div>
+
+                    <div class="pipeline-node healthy">
+                        <div class="pipeline-icon">MQ</div>
+                        <strong>MQTT BROKER</strong>
+                        <span>MESSAGE TRANSPORT</span>
+                        <small>● CONNECTED</small>
+                    </div>
+
+                    <div class="pipeline-line"></div>
+
+                    <div class="pipeline-node healthy">
+                        <div class="pipeline-icon">TP</div>
+                        <strong>PROCESSOR</strong>
+                        <span>TELEMETRY ENGINE</span>
+                        <small>● RUNNING</small>
+                    </div>
+
+                    <div class="pipeline-line"></div>
+
+                    <div class="pipeline-node healthy">
+                        <div class="pipeline-icon">DB</div>
+                        <strong>INFLUXDB</strong>
+                        <span>TIME-SERIES DATA</span>
+                        <small>● CONNECTED</small>
+                    </div>
+
+                    <div class="pipeline-line"></div>
+
+                    <div class="pipeline-node healthy">
+                        <div class="pipeline-icon">API</div>
+                        <strong>FLASK API</strong>
+                        <span>APPLICATION SERVICE</span>
+                        <small>● HEALTHY</small>
+                    </div>
+
+                </div>
+
+                <div class="system-grid">
+
+                    <div class="panel">
+                        <div class="panel-header">
+                            <div>
+                                <div class="panel-title">APPLICATION SERVER</div>
+                                <div class="panel-subtitle">Runtime information</div>
+                            </div>
+                            <span class="online-badge">HEALTHY</span>
+                        </div>
+
+                        <div class="info-list">
+                            <div><span>STATUS</span><strong id="sys-status">--</strong></div>
+                            <div><span>ENVIRONMENT</span><strong id="sys-env">--</strong></div>
+                            <div><span>PYTHON</span><strong id="sys-python">--</strong></div>
+                            <div><span>CPU USAGE</span><strong id="sys-cpu">--</strong></div>
+                            <div><span>MEMORY USAGE</span><strong id="sys-memory">--</strong></div>
+                            <div><span>PROCESS ID</span><strong id="sys-pid">--</strong></div>
+                            <div><span>UPTIME</span><strong id="sys-uptime">--</strong></div>
+                        </div>
+                    </div>
+
+                    <div class="panel">
+                        <div class="panel-header">
+                            <div>
+                                <div class="panel-title">DATABASE</div>
+                                <div class="panel-subtitle">InfluxDB time-series storage</div>
+                            </div>
+                            <span class="online-badge" id="database-badge">CONNECTED</span>
+                        </div>
+
+                        <div class="database-visual">
+                            <div class="database-ring">
+                                <div>DB</div>
+                            </div>
+                            <strong>INFLUXDB</strong>
+                            <span>TELEMETRY BUCKET</span>
+                        </div>
+                    </div>
+
+                </div>
+
+            </section>
+
+        </main>
+    </div>
+
+    <!-- FOOTER -->
+    <footer class="statusbar">
+        <div>
+            <span class="status-dot online"></span>
+            <strong>PLATFORM OPERATIONAL</strong>
+        </div>
+        <div>MQTT</div>
+        <div>INFLUXDB</div>
+        <div>TELEMETRY ENGINE</div>
+        <div>FLASK API</div>
+        <div class="footer-right">
+            LAST UPDATE <strong id="last-update">--</strong>
+        </div>
+    </footer>
+
+</div>
+
+<script src="./js/api.js"></script>
+<script src="./js/app.js"></script>
+
+</body>
+</html>

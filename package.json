@@ -1,0 +1,29 @@
+{
+  "name": "iiot",
+  "version": "1.0.0",
+  "main": "index.js",
+  "directories": {
+    "test": "tests"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Logesh-Pro/INDUSTRIAL-IoT-INTELLIGENCE.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Logesh-Pro/INDUSTRIAL-IoT-INTELLIGENCE/issues"
+  },
+  "homepage": "https://github.com/Logesh-Pro/INDUSTRIAL-IoT-INTELLIGENCE#readme",
+  "description": "",
+  "dependencies": {
+    "canvas": "^3.2.3",
+    "chart.js": "^4.5.1",
+    "jsdom": "^29.1.1",
+    "puppeteer": "^25.10.0"
+  }
+}
