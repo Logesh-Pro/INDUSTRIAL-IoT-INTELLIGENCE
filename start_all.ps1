@@ -1,209 +1,212 @@
-﻿$ErrorActionPreference = "Continue"
+﻿$ErrorActionPreference = "Stop"
 
-$ProjectRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
-$InfluxExe = Join-Path $env:USERPROFILE "Downloads\influxdb2-2.9.1-windows_amd64\influxd.exe"
+$ProjectRoot = "C:\Users\admin\Desktop\iiot"
+$MosquittoDir = "C:\Program Files\mosquitto"
+$InfluxDir = "C:\Users\admin\Downloads\influxdb2-2.9.1-windows_amd64"
 
+Write-Host ""
 Write-Host "============================================================"
-Write-Host "INDUSTRIAL IoT - START ALL SERVICES"
+Write-Host "       INDUSTRIAL IoT - STARTING ALL SERVICES"
 Write-Host "============================================================"
+Write-Host ""
 
 Set-Location $ProjectRoot
 
 # ------------------------------------------------------------
-# Stop old project processes to avoid duplicate instances
+# 1. MOSQUITTO MQTT BROKER
 # ------------------------------------------------------------
 
-Write-Host "`nCleaning previous project processes..."
+Write-Host "[1/5] Starting Mosquitto MQTT Broker..."
 
-Get-CimInstance Win32_Process |
-    Where-Object {
-        $_.Name -eq "python.exe" -and
-        (
-            $_.CommandLine -match "backend\.api\.app" -or
-            $_.CommandLine -match "backend\.services\.telemetry_processor" -or
-            $_.CommandLine -match "esp32_mqtt_simulator\.py"
-        )
-    } |
-    ForEach-Object {
-        Write-Host "Stopping PID $($_.ProcessId)"
-        Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue
-    }
+$mosquittoRunning = Get-Process mosquitto -ErrorAction SilentlyContinue
 
-Start-Sleep -Seconds 2
-
-
-# ------------------------------------------------------------
-# Start InfluxDB
-# ------------------------------------------------------------
-
-Write-Host "`nStarting InfluxDB..."
-
-if (Test-Path $InfluxExe) {
-
-    Start-Process `
-        -FilePath $InfluxExe `
-        -WorkingDirectory (Split-Path $InfluxExe) `
-        -WindowStyle Normal
-
-    Write-Host "InfluxDB starting..." -ForegroundColor Green
-
+if ($mosquittoRunning) {
+    Write-Host "      Mosquitto is already running."
 }
 else {
+    Start-Process powershell.exe -ArgumentList @(
+        "-NoExit",
+        "-Command",
+        "Set-Location '$MosquittoDir'; .\mosquitto.exe -c .\iiot.conf -v"
+    )
 
-    Write-Host "InfluxDB executable not found:"
-    Write-Host $InfluxExe -ForegroundColor Red
+    Write-Host "      Mosquitto starting..."
 }
-
-
-# ------------------------------------------------------------
-# Wait for InfluxDB
-# ------------------------------------------------------------
-
-Write-Host "Waiting for InfluxDB..."
-
-$influxReady = $false
-
-for ($i = 0; $i -lt 20; $i++) {
-
-    try {
-
-        $health = Invoke-RestMethod `
-            "http://127.0.0.1:8086/health" `
-            -TimeoutSec 2
-
-        if ($health.status -eq "pass") {
-            $influxReady = $true
-            break
-        }
-
-    }
-    catch {}
-
-    Start-Sleep -Seconds 1
-}
-
-if ($influxReady) {
-    Write-Host "InfluxDB: ONLINE" -ForegroundColor Green
-}
-else {
-    Write-Host "InfluxDB did not become ready." -ForegroundColor Yellow
-}
-
-
-# ------------------------------------------------------------
-# Start Flask API
-# ------------------------------------------------------------
-
-Write-Host "`nStarting Flask API..."
-
-Start-Process `
-    -FilePath "python" `
-    -ArgumentList "-m backend.api.app" `
-    -WorkingDirectory $ProjectRoot `
-    -WindowStyle Normal
-
-Write-Host "Flask API starting..." -ForegroundColor Green
-
-
-# ------------------------------------------------------------
-# Wait for API
-# ------------------------------------------------------------
-
-Write-Host "Waiting for Flask API..."
-
-$apiReady = $false
-
-for ($i = 0; $i -lt 20; $i++) {
-
-    try {
-
-        $health = Invoke-RestMethod `
-            "http://127.0.0.1:5000/api/health" `
-            -TimeoutSec 2
-
-        if ($health.status -eq "healthy") {
-            $apiReady = $true
-            break
-        }
-
-    }
-    catch {}
-
-    Start-Sleep -Seconds 1
-}
-
-if ($apiReady) {
-    Write-Host "Flask API: ONLINE" -ForegroundColor Green
-}
-else {
-    Write-Host "Flask API did not become ready." -ForegroundColor Yellow
-}
-
-
-# ------------------------------------------------------------
-# Start MQTT Processor
-# ------------------------------------------------------------
-
-Write-Host "`nStarting MQTT telemetry processor..."
-
-Start-Process `
-    -FilePath "python" `
-    -ArgumentList "-m backend.services.telemetry_processor" `
-    -WorkingDirectory $ProjectRoot `
-    -WindowStyle Normal
-
-Write-Host "MQTT Processor: STARTED" -ForegroundColor Green
-
-
-# ------------------------------------------------------------
-# Start ESP32 MQTT Simulator
-# ------------------------------------------------------------
 
 Start-Sleep -Seconds 3
 
-Write-Host "`nStarting ESP32 MQTT simulator..."
+# Check MQTT port
+$tcp = Get-NetTCPConnection -LocalPort 1883 -State Listen -ErrorAction SilentlyContinue
 
-Start-Process `
-    -FilePath "python" `
-    -ArgumentList "esp32_mqtt_simulator.py" `
-    -WorkingDirectory $ProjectRoot `
-    -WindowStyle Normal
-
-Write-Host "ESP32 Simulator: STARTED" -ForegroundColor Green
-
+if ($tcp) {
+    Write-Host "      MQTT Broker READY"
+}
+else {
+    Write-Host "      WARNING: MQTT port 1883 not detected."
+}
 
 # ------------------------------------------------------------
-# Final startup information
+# 2. INFLUXDB
 # ------------------------------------------------------------
 
-Start-Sleep -Seconds 5
+Write-Host ""
+Write-Host "[2/5] Starting InfluxDB..."
 
-Write-Host "`n============================================================"
-Write-Host "INDUSTRIAL IoT SYSTEM STARTED"
+$influxRunning = Get-Process influxd -ErrorAction SilentlyContinue
+
+if ($influxRunning) {
+    Write-Host "      InfluxDB is already running."
+}
+else {
+    Start-Process powershell.exe -ArgumentList @(
+        "-NoExit",
+        "-Command",
+        "Set-Location '$InfluxDir'; .\influxd.exe"
+    )
+
+    Write-Host "      InfluxDB starting..."
+}
+
+Write-Host "      Waiting for InfluxDB..."
+
+$influxReady = $false
+
+for ($i = 1; $i -le 30; $i++) {
+
+    try {
+        $response = Invoke-WebRequest `
+            -Uri "http://127.0.0.1:8086/health" `
+            -UseBasicParsing `
+            -TimeoutSec 2 `
+            -ErrorAction Stop
+
+        if ($response.StatusCode -eq 200) {
+            $influxReady = $true
+            break
+        }
+    }
+    catch {
+        Start-Sleep -Seconds 1
+    }
+}
+
+if ($influxReady) {
+    Write-Host "      InfluxDB READY"
+}
+else {
+    Write-Host "      WARNING: InfluxDB did not become ready."
+}
+
+# ------------------------------------------------------------
+# 3. TELEMETRY PROCESSOR
+# ------------------------------------------------------------
+
+Write-Host ""
+Write-Host "[3/5] Starting MQTT Telemetry Processor..."
+
+$processorRunning = Get-CimInstance Win32_Process |
+    Where-Object {
+        $_.Name -match "python.exe" -and
+        $_.CommandLine -match "backend.services.telemetry_processor"
+    }
+
+if ($processorRunning) {
+    Write-Host "      Telemetry Processor is already running."
+}
+else {
+    Start-Process powershell.exe -ArgumentList @(
+        "-NoExit",
+        "-Command",
+        "Set-Location '$ProjectRoot'; python -m backend.services.telemetry_processor"
+    )
+
+    Write-Host "      Telemetry Processor starting..."
+}
+
+Start-Sleep -Seconds 4
+
+# ------------------------------------------------------------
+# 4. FLASK API
+# ------------------------------------------------------------
+
+Write-Host ""
+Write-Host "[4/5] Starting Flask API..."
+
+$apiRunning = Get-CimInstance Win32_Process |
+    Where-Object {
+        $_.Name -match "python.exe" -and
+        $_.CommandLine -match "backend.api.app"
+    }
+
+if ($apiRunning) {
+    Write-Host "      Flask API is already running."
+}
+else {
+    Start-Process powershell.exe -ArgumentList @(
+        "-NoExit",
+        "-Command",
+        "Set-Location '$ProjectRoot'; python -m backend.api.app"
+    )
+
+    Write-Host "      Flask API starting..."
+}
+
+Write-Host "      Waiting for Flask API..."
+
+$apiReady = $false
+
+for ($i = 1; $i -le 30; $i++) {
+
+    try {
+        $response = Invoke-WebRequest `
+            -Uri "http://127.0.0.1:5000/api/health" `
+            -UseBasicParsing `
+            -TimeoutSec 2 `
+            -ErrorAction Stop
+
+        if ($response.StatusCode -eq 200) {
+            $apiReady = $true
+            break
+        }
+    }
+    catch {
+        Start-Sleep -Seconds 1
+    }
+}
+
+if ($apiReady) {
+    Write-Host "      Flask API READY"
+}
+else {
+    Write-Host "      WARNING: Flask API did not become ready."
+}
+
+# ------------------------------------------------------------
+# 5. DASHBOARD
+# ------------------------------------------------------------
+
+Write-Host ""
+Write-Host "[5/5] Opening Industrial IoT Dashboard..."
+
+Start-Sleep -Seconds 2
+
+Start-Process "http://127.0.0.1:5000"
+
+# ------------------------------------------------------------
+# COMPLETE
+# ------------------------------------------------------------
+
+Write-Host ""
 Write-Host "============================================================"
-
+Write-Host "             INDUSTRIAL IoT SYSTEM READY"
+Write-Host "============================================================"
 Write-Host ""
-Write-Host "Dashboard:"
-Write-Host "http://127.0.0.1:5000/" -ForegroundColor Cyan
-
+Write-Host " MQTT Broker : 1883"
+Write-Host " InfluxDB    : http://127.0.0.1:8086"
+Write-Host " Flask API   : http://127.0.0.1:5000"
+Write-Host " Dashboard   : http://127.0.0.1:5000"
 Write-Host ""
-Write-Host "API:"
-Write-Host "http://127.0.0.1:5000/api/health" -ForegroundColor Cyan
-
+Write-Host " ESP32_01 should now connect automatically."
 Write-Host ""
-Write-Host "InfluxDB:"
-Write-Host "http://127.0.0.1:8086" -ForegroundColor Cyan
-
+Write-Host "============================================================"
 Write-Host ""
-Write-Host "MQTT:"
-Write-Host "127.0.0.1:1883" -ForegroundColor Cyan
-
-Write-Host ""
-Write-Host "Telemetry:"
-Write-Host "industrial/site01/zone01/telemetry"
-
-Write-Host ""
-Write-Host "System is ready."
-
-# Open dashboard automatically
-Start-Process "http://127.0.0.1:5000/"
